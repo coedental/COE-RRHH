@@ -245,6 +245,52 @@ async function uploadDocFile(empId, file) {
   } catch(e) { console.error(e); return null; }
 }
 
+// Migrar PDFs desde backup JSON a Supabase
+async function migrarDocsDesdeBackup(backupDocs, onProgress) {
+  if (!sb) return {ok:0, fail:0};
+  var ok=0, fail=0, total=0;
+  for (var empId of Object.keys(backupDocs)) {
+    var lista = backupDocs[empId];
+    for (var doc of lista) {
+      if (!doc.pdfBase64 || doc.storage_path) continue; // ya migrado o sin PDF
+      total++;
+      try {
+        // Convertir base64 a Blob
+        var base64 = doc.pdfBase64;
+        var parts = base64.split(',');
+        var mime = parts[0].match(/:(.*?);/)[1];
+        var bstr = atob(parts[1]);
+        var n = bstr.length;
+        var u8arr = new Uint8Array(n);
+        for (var i=0; i<n; i++) u8arr[i] = bstr.charCodeAt(i);
+        var blob = new Blob([u8arr], {type: mime});
+        var file = new File([blob], doc.archivoNombre||doc.nombre, {type: mime});
+
+        // Subir a Supabase Storage
+        var path = empId + '/' + doc.id + '_' + (doc.archivoNombre||doc.nombre);
+        var r = await sb.storage.from('documentos').upload(path, file, {upsert: true});
+        if (r.error) { fail++; continue; }
+
+        // Actualizar registro en tabla docs
+        await sb.from('docs').upsert({
+          doc_id: doc.id,
+          emp_id: empId,
+          nombre: doc.nombre,
+          tipo: doc.tipo||'Archivo adjunto',
+          fecha: doc.fecha||'',
+          archivo_nombre: doc.archivoNombre||doc.nombre,
+          tam: doc.tam||'',
+          ok: true,
+          storage_path: path
+        });
+        ok++;
+        if (onProgress) onProgress(ok, total);
+      } catch(e) { fail++; console.error('Error migrando doc:', doc.nombre, e); }
+    }
+  }
+  return {ok, fail, total};
+}
+
 async function getDocUrl(storagePath) {
   if (!sb || !storagePath) return '';
   try {
@@ -361,6 +407,9 @@ function App(){
   const [sbReady,setSbReady]=useState(true);
   const [showSetup,setShowSetup]=useState(false); // modal disabled - credentials hardcoded
   const [syncMsg,setSyncMsg]=useState('');
+  const [migrando,setMigrando]=useState(false);
+  const [migrMsg,setMigrMsg]=useState('');
+  const migrRef=useRef(null);
   const chatEnd=useRef(null);
 
   useEffect(()=>{if(chatEnd.current)chatEnd.current.scrollIntoView({behavior:'smooth'});},[chat,cld]);
@@ -554,9 +603,36 @@ function App(){
   }
 
   function expBk(){
-    const data={employees:emps.map(e=>({...e,foto:fotos[e.id]||getFotoLocal(e.id)||''})),docs};
+    // Incluir contenido base64 de cada PDF guardado en localStorage
+    const docsConPDF={};
+    Object.entries(docs).forEach(([empId,lista])=>{
+      docsConPDF[empId]=lista.map(doc=>{
+        const pdfData=localStorage.getItem('coe_df8_'+doc.id)||localStorage.getItem('coe_df7_'+doc.id)||'';
+        return {...doc, pdfBase64: pdfData};
+      });
+    });
+    const data={employees:emps.map(e=>({...e,foto:fotos[e.id]||getFotoLocal(e.id)||''})),docs:docsConPDF};
     const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='COE_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  }
+
+  async function handleMigrarBackup(file){
+    if(!file||!sb){return;}
+    setMigrando(true);
+    setMigrMsg('Leyendo backup...');
+    try{
+      const text=await file.text();
+      const bk=JSON.parse(text);
+      if(!bk.docs){setMigrMsg('❌ Backup sin documentos');setMigrando(false);return;}
+      setMigrMsg('Migrando PDFs a la nube...');
+      const result=await migrarDocsDesdeBackup(bk.docs,(ok,total)=>{
+        setMigrMsg('Subiendo PDFs: '+ok+' de '+total+'...');
+      });
+      setMigrMsg('✅ Listo: '+result.ok+' PDFs migrados'+(result.fail>0?' ('+result.fail+' fallaron)':''));
+      await loadAll();
+    }catch(e){setMigrMsg('❌ Error: '+e.message);}
+    setMigrando(false);
+    if(migrRef.current)migrRef.current.value='';
   }
 
   async function sendChat(){
@@ -625,6 +701,10 @@ function App(){
         <button className={`tab${tab==='search'?' active-blue':''}`} onClick={()=>setView('search')}>Nuevo</button>
         <button className={`tab${tab==='ia'?' active':''}`} onClick={()=>setView('ia')}>IA</button>
         <button className="tab" onClick={expBk}>Backup</button>
+        <label className="tab" style={{cursor:'pointer',background:'#e8f4fd',color:'#0e3f5e'}} title="Migrar PDFs del backup a la nube">
+          📤 Migrar PDFs
+          <input ref={migrRef} type="file" accept=".json" style={{display:'none'}} onChange={e=>e.target.files[0]&&handleMigrarBackup(e.target.files[0])}/>
+        </label>
         <button className="tab" onClick={()=>{}} title="Supabase conectado" style={{background:'#c0e8da',color:'#2a7a62'}}>
           🟢 Sync
         </button>
@@ -633,6 +713,7 @@ function App(){
 
     {smsg&&<div style={{background:'#c0e8da',color:'#1a4d3e',padding:'8px 20px',fontSize:13,fontWeight:600,textAlign:'center'}}>{smsg}</div>}
     {syncMsg&&<div style={{background:'#fff3cd',color:'#856404',padding:'6px 20px',fontSize:12,textAlign:'center'}}>{syncMsg}</div>}
+    {migrMsg&&<div style={{background: migrMsg.startsWith('✅')?'#c0e8da':migrMsg.startsWith('❌')?'#fde8df':'#e8f4fd',color:'#1a4d3e',padding:'8px 20px',fontSize:13,fontWeight:600,textAlign:'center'}}>{migrMsg}</div>}
 
     {/* Stats */}
     {(view==='list'||view==='bajas')&&<div className="stats">
