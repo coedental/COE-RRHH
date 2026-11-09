@@ -358,8 +358,8 @@ function App(){
   const [ak,setAk]=useState(getAK);
   const [akInput,setAkInput]=useState('');
   const [loading,setLoading]=useState(true);
-  const [sbReady,setSbReady]=useState(!!sb);
-  const [showSetup,setShowSetup]=useState(false);
+  const [sbReady,setSbReady]=useState(true);
+  const [showSetup,setShowSetup]=useState(false); // modal disabled - credentials hardcoded
   const [syncMsg,setSyncMsg]=useState('');
   const chatEnd=useRef(null);
 
@@ -372,6 +372,10 @@ function App(){
 
   async function loadAll(){
     setLoading(true);
+    // Always ensure sb is initialized with hardcoded credentials
+    if(!sb && window.supabase){
+      sb = window.supabase.createClient('https://ysahidcycsmjqfnoagtk.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzYWhpZGN5Y3NtanFmbm9hZ3RrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQyNTc4MTQsImV4cCI6MjEwOTgzMzgxNH0.7_U7z2JAzxf-XDDIV8fEfIfpulmGc5EVO51JR3ToNuc');
+    }
     if(sb){
       // Load from Supabase
       const [remEmps,remDocs,remFotos]=await Promise.all([getEmpsRemote(),getDocsRemote(),getAllFotosRemote()]);
@@ -608,7 +612,7 @@ function App(){
   const tab=view==='list'||view==='bajas'||view==='search'||view==='ia'?view:'list';
 
   return <div>
-    {showSetup&&<SetupModal onSave={handleSbSetup}/>}
+    {false&&<SetupModal onSave={handleSbSetup}/>}
     <nav className="nav">
       <div style={{display:'flex',alignItems:'center',gap:8}}>
         <div className="logo">COE</div>
