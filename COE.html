@@ -77,8 +77,6 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fafafa;color:#1a1a1a}
 <div id="root"><div style="text-align:center;padding:60px;font-size:16px;color:#666">Cargando sistema...</div></div>
 
 <script>
-
-<script>
 // ============================================================
 // CONFIGURACIÓN SUPABASE - Reemplazar con tus credenciales
 // ============================================================
@@ -270,6 +268,7 @@ function getDocsLocal(){try{var s=localStorage.getItem(LS_DOCS);if(s)return JSON
   try{return JSON.parse(decodeB64UTF8(DOCS_DATA));}catch(e){return {};}}
 function getAK(){try{return localStorage.getItem('coe_ak')||'';}catch(e){return '';}}
 function setAK(v){try{localStorage.setItem('coe_ak',v);}catch(e){}}
+window.getAK=getAK;window.setAK=setAK;window.initSupabase=initSupabase;window.decodeB64UTF8=decodeB64UTF8;window.getEmpsLocal=getEmpsLocal;window.getDocsLocal=getDocsLocal;window.getFotoLocal=getFotoLocal;window.setFotoLocal=setFotoLocal;window.getEmpsRemote=getEmpsRemote;window.saveEmpsRemote=saveEmpsRemote;window.saveOneEmpRemote=saveOneEmpRemote;window.deleteEmpRemote=deleteEmpRemote;window.getFotoRemote=getFotoRemote;window.setFotoRemote=setFotoRemote;window.getAllFotosRemote=getAllFotosRemote;window.getDocsRemote=getDocsRemote;window.saveDocRemote=saveDocRemote;window.deleteDocRemote=deleteDocRemote;window.uploadDocFile=uploadDocFile;window.getDocUrl=getDocUrl;window.loadBuiltinPhotos=loadBuiltinPhotos;
 
 function loadBuiltinPhotos(){
   try{
