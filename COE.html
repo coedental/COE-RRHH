@@ -76,7 +76,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fafafa;color:#1a1a1a}
 <body>
 <div id="root"><div style="text-align:center;padding:60px;font-size:16px;color:#666">Cargando sistema...</div></div>
 
-<script>
+<script type="text/babel">
+
 // ============================================================
 // CONFIGURACIÓN SUPABASE - Reemplazar con tus credenciales
 // ============================================================
@@ -268,7 +269,6 @@ function getDocsLocal(){try{var s=localStorage.getItem(LS_DOCS);if(s)return JSON
   try{return JSON.parse(decodeB64UTF8(DOCS_DATA));}catch(e){return {};}}
 function getAK(){try{return localStorage.getItem('coe_ak')||'';}catch(e){return '';}}
 function setAK(v){try{localStorage.setItem('coe_ak',v);}catch(e){}}
-window.getAK=getAK;window.setAK=setAK;window.initSupabase=initSupabase;window.decodeB64UTF8=decodeB64UTF8;window.getEmpsLocal=getEmpsLocal;window.getDocsLocal=getDocsLocal;window.getFotoLocal=getFotoLocal;window.setFotoLocal=setFotoLocal;window.getEmpsRemote=getEmpsRemote;window.saveEmpsRemote=saveEmpsRemote;window.saveOneEmpRemote=saveOneEmpRemote;window.deleteEmpRemote=deleteEmpRemote;window.getFotoRemote=getFotoRemote;window.setFotoRemote=setFotoRemote;window.getAllFotosRemote=getAllFotosRemote;window.getDocsRemote=getDocsRemote;window.saveDocRemote=saveDocRemote;window.deleteDocRemote=deleteDocRemote;window.uploadDocFile=uploadDocFile;window.getDocUrl=getDocUrl;window.loadBuiltinPhotos=loadBuiltinPhotos;
 
 function loadBuiltinPhotos(){
   try{
@@ -283,9 +283,8 @@ function loadBuiltinPhotos(){
 loadBuiltinPhotos();
 function getFotoLocal(id){try{return localStorage.getItem('coe_f10_'+id)||'';}catch(e){return '';}}
 function setFotoLocal(id,v){try{localStorage.setItem('coe_f10_'+id,v);}catch(e){}}
-</script>
 
-<script type="text/babel">
+
 const {useState,useEffect,useRef,useCallback} = React;
 
 function edDate(s){if(!s||s==='-'||isNaN(Number(s)))return s||'-';var d=new Date(Math.round((Number(s)-25569)*86400000));return d.toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});}
@@ -881,6 +880,7 @@ function App(){
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+
 </script>
 </body>
 </html>
